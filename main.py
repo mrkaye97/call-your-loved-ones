@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 
 from api.users import router as users_router
 from common.dependencies import Connection, UserDependency
@@ -16,6 +16,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+async def index():
+    return FileResponse("templates/index.html")
 
 
 @app.get("/favicon.ico", include_in_schema=False)

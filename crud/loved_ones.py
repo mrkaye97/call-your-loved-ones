@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 class LovedOne(BaseModel):
     username: str
     name: str
-    last_called: datetime | None
+    last_called_at: datetime | None = None
     created_at: datetime = Field(default_factory=datetime.now)
 
     @staticmethod
@@ -16,20 +16,20 @@ class LovedOne(BaseModel):
         return LovedOne(
             username=row["username"],
             name=row["name"],
-            last_called=row["last_called"],
+            last_called_at=row["last_called_at"],
             created_at=row["created_at"],
         )
 
 
 async def get_loved_ones(conn: asyncpg.Connection, username: str) -> list[LovedOne]:
     query = """
-        SELECT user_id, name, last_called, created_at
+        SELECT user_id, name, last_called_at, created_at
         FROM loved_one
         WHERE username = $1
         ORDER BY
-            CASE WHEN last_called IS NULL THEN 0 ELSE 1 END,
-            CASE WHEN last_called IS NULL THEN created_at END DESC,
-            last_called ASC
+            CASE WHEN last_called_at IS NULL THEN 0 ELSE 1 END,
+            CASE WHEN last_called_at IS NULL THEN created_at END DESC,
+            last_called_at ASC
     """
 
     rows = await conn.fetch(query, username)
@@ -39,9 +39,9 @@ async def get_loved_ones(conn: asyncpg.Connection, username: str) -> list[LovedO
 
 async def create_loved_one(conn: asyncpg.Connection, username: str, name: str) -> LovedOne:
     query = """
-        INSERT INTO loved_one (username, name, last_called)
+        INSERT INTO loved_one (username, name, last_called_at)
         VALUES ($1, $2, NULL)
-        RETURNING username, name, last_called, created_at
+        RETURNING username, name, last_called_at, created_at
     """
 
     row = await conn.fetchrow(query, username, name)
@@ -54,9 +54,9 @@ async def mark_loved_one_called(
 ) -> LovedOne | None:
     query = """
         UPDATE loved_one
-        SET last_called = NOW()
+        SET last_called_at = NOW()
         WHERE name = $1 AND username = $2
-        RETURNING user_id, name, last_called, created_at
+        RETURNING user_id, name, last_called_at, created_at
     """
 
     row = await conn.fetchrow(query, loved_one_name, username)

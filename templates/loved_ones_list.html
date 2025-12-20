@@ -1,7 +1,7 @@
 {% for loved_one in loved_ones %}
 <div class="bg-warm-800 border border-warm-500/30 rounded-xl p-5 flex flex-col">
     <span class="font-medium text-warm-50 text-lg mb-1">{{ loved_one.name }}</span>
-    <span class="text-warm-300 text-sm mb-4">last called: {{ loved_one.last_called | format_date }}</span>
+    <span class="text-warm-300 text-sm mb-4">last called: {{ loved_one.last_called_at | format_date }}</span>
     <div class="flex gap-2 mt-auto justify-end">
         <button
             hx-post="/loved_ones/{{ loved_one.name }}/called"

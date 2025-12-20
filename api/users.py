@@ -5,7 +5,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 
 from common.dependencies import Connection
-from crud.users import UserRegistration, authenticate_user, create_user
+from crud.users import RegistrationRequest, authenticate_user, create_user
 from services.auth import create_access_token
 
 router = APIRouter(prefix="/api")
@@ -18,10 +18,10 @@ class Token(BaseModel):
 
 @router.post("/register", response_model=Token)
 async def register(
-    user_data: UserRegistration,
+    body: RegistrationRequest,
     conn: Connection,
 ) -> Token:
-    username = await create_user(conn, user_data)
+    username = await create_user(conn, body)
     access_token = create_access_token(username)
 
     return Token(access_token=access_token, token_type="bearer")

@@ -54,8 +54,8 @@
 
             function sortLovedOnes(lovedOnes) {
                 return lovedOnes.sort((a, b) => {
-                    const aLastCalled = a.last_called ? new Date(a.last_called).getTime() : null;
-                    const bLastCalled = b.last_called ? new Date(b.last_called).getTime() : null;
+                    const aLastCalled = a.last_called_at ? new Date(a.last_called_at).getTime() : null;
+                    const bLastCalled = b.last_called_at ? new Date(b.last_called_at).getTime() : null;
                     const aCreated = new Date(a.created_at).getTime();
                     const bCreated = new Date(b.created_at).getTime();
 
@@ -122,7 +122,7 @@
                 container.innerHTML = sorted.map(lo => `
                     <div class="bg-warm-800 border border-warm-500/30 rounded-xl p-5 flex flex-col">
                         <span class="font-medium text-warm-50 text-lg mb-1">${lo.name}</span>
-                        <span class="text-warm-300 text-sm mb-4">last called: ${formatDate(lo.last_called)}</span>
+                        <span class="text-warm-300 text-sm mb-4">last called: ${formatDate(lo.last_called_at)}</span>
                         <div class="flex gap-2 mt-auto justify-end">
                             <button
                                 onclick="markCalled('${lo.name.replace(/'/g, "\\'")}')"
@@ -161,7 +161,7 @@
                     const lovedOnes = getLovedOnesFromStorage();
                     lovedOnes.push({
                         name,
-                        last_called: null,
+                        last_called_at: null,
                         created_at: new Date().toISOString()
                     });
                     saveLovedOnesToStorage(lovedOnes);
@@ -177,7 +177,7 @@
                     const lovedOnes = getLovedOnesFromStorage();
                     const lo = lovedOnes.find(l => l.name === name);
                     if (lo) {
-                        lo.last_called = new Date().toISOString();
+                        lo.last_called_at = new Date().toISOString();
                         saveLovedOnesToStorage(lovedOnes);
                         renderLovedOnes(lovedOnes);
                     }
@@ -216,16 +216,25 @@
                 }
             }
 
-            async function register(email, password) {
+            async function register(username, password) {
+                // Get loved ones from local storage to migrate them
+                const lovedOnes = getLovedOnesFromStorage();
+
                 const response = await fetch('/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify({
+                        username,
+                        password,
+                        loved_ones: lovedOnes
+                    })
                 });
 
                 if (response.ok) {
                     const data = await response.json();
                     setToken(data.access_token);
+                    // Clear local storage since we've migrated to the server
+                    localStorage.removeItem(STORAGE_KEY);
                     window.location.reload();
                 } else {
                     throw new Error('Registration failed');
@@ -288,10 +297,10 @@
 
                 document.getElementById('register-form').addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    const email = e.target.elements['register-email'].value;
+                    const username = e.target.elements['register-email'].value;
                     const password = e.target.elements['register-password'].value;
                     try {
-                        await register(email, password);
+                        await register(username, password);
                     } catch (err) {
                         alert(err.message);
                     }

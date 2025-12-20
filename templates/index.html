@@ -101,15 +101,15 @@
                 return await response.json();
             }
 
-            async function markCalledAPI(lovedOneId) {
-                const response = await apiRequest(`/api/loved_ones/${lovedOneId}/called`, {
+            async function markCalledAPI(name) {
+                const response = await apiRequest(`/api/loved_ones/${encodeURIComponent(name)}/called`, {
                     method: 'POST'
                 });
                 return await response.json();
             }
 
-            async function deleteLovedOneAPI(lovedOneId) {
-                await apiRequest(`/api/loved_ones/${lovedOneId}`, {
+            async function deleteLovedOneAPI(name) {
+                await apiRequest(`/api/loved_ones/${encodeURIComponent(name)}`, {
                     method: 'DELETE'
                 });
             }
@@ -129,13 +129,13 @@
                         <span class="text-warm-300 text-sm mb-4">last called: ${formatDate(lo.last_called)}</span>
                         <div class="flex gap-2 mt-auto justify-end">
                             <button
-                                onclick="markCalled('${lo.id}')"
+                                onclick="markCalled('${lo.name.replace(/'/g, "\\'")}')"
                                 class="bg-warm-300 text-warm-950 px-4 py-1.5 rounded-md text-sm font-medium hover:bg-warm-100 transition-colors cursor-pointer"
                             >
                                 called
                             </button>
                             <button
-                                onclick="deleteLo('${lo.id}')"
+                                onclick="deleteLo('${lo.name.replace(/'/g, "\\'")}')"
                                 class="bg-warm-800 text-warm-400 px-3 py-1.5 rounded-md text-sm font-medium border border-warm-500/50 hover:bg-matte-red hover:text-warm-50 hover:border-matte-red transition-colors cursor-pointer"
                             >
                                 delete
@@ -164,7 +164,6 @@
                 } else {
                     const lovedOnes = getLovedOnesFromStorage();
                     lovedOnes.push({
-                        id: crypto.randomUUID(),
                         name,
                         last_called: null,
                         created_at: new Date().toISOString()
@@ -174,13 +173,13 @@
                 }
             }
 
-            async function markCalled(id) {
+            async function markCalled(name) {
                 if (isLoggedIn()) {
-                    await markCalledAPI(id);
+                    await markCalledAPI(name);
                     await loadLovedOnes();
                 } else {
                     const lovedOnes = getLovedOnesFromStorage();
-                    const lo = lovedOnes.find(l => l.id === id);
+                    const lo = lovedOnes.find(l => l.name === name);
                     if (lo) {
                         lo.last_called = new Date().toISOString();
                         saveLovedOnesToStorage(lovedOnes);
@@ -189,13 +188,13 @@
                 }
             }
 
-            async function deleteLo(id) {
+            async function deleteLo(name) {
                 if (isLoggedIn()) {
-                    await deleteLovedOneAPI(id);
+                    await deleteLovedOneAPI(name);
                     await loadLovedOnes();
                 } else {
                     let lovedOnes = getLovedOnesFromStorage();
-                    lovedOnes = lovedOnes.filter(l => l.id !== id);
+                    lovedOnes = lovedOnes.filter(l => l.name !== name);
                     saveLovedOnesToStorage(lovedOnes);
                     renderLovedOnes(lovedOnes);
                 }

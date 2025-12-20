@@ -41,9 +41,9 @@ async def create_loved_one_api(name: str, username: UserDependency, conn: Connec
     return await create_loved_one(conn, username, name)
 
 
-@app.post("/api/loved_ones/{loved_one_id}/called")
-async def mark_called_api(loved_one_name: str, username: UserDependency, conn: Connection):
-    loved_one = await mark_loved_one_called(conn, username, loved_one_name)
+@app.post("/api/loved_ones/{name}/called")
+async def mark_called_api(name: str, username: UserDependency, conn: Connection):
+    loved_one = await mark_loved_one_called(conn, username, name)
 
     if not loved_one:
         raise HTTPException(status_code=404, detail="Loved one not found")
@@ -51,9 +51,9 @@ async def mark_called_api(loved_one_name: str, username: UserDependency, conn: C
     return loved_one
 
 
-@app.delete("/api/loved_ones/{loved_one_id}")
-async def delete_loved_one_api(loved_one_name: str, username: UserDependency, conn: Connection):
-    success = await delete_loved_one(conn, username, loved_one_name)
+@app.delete("/api/loved_ones/{name}")
+async def delete_loved_one_api(name: str, username: UserDependency, conn: Connection):
+    success = await delete_loved_one(conn, username, name)
 
     if not success:
         raise HTTPException(status_code=404, detail="Loved one not found")

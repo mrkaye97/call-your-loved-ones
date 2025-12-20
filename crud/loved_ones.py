@@ -23,13 +23,9 @@ class LovedOne(BaseModel):
 
 async def get_loved_ones(conn: asyncpg.Connection, username: str) -> list[LovedOne]:
     query = """
-        SELECT user_id, name, last_called_at, created_at
+        SELECT username, name, last_called_at, created_at
         FROM loved_one
         WHERE username = $1
-        ORDER BY
-            CASE WHEN last_called_at IS NULL THEN 0 ELSE 1 END,
-            CASE WHEN last_called_at IS NULL THEN created_at END DESC,
-            last_called_at ASC
     """
 
     rows = await conn.fetch(query, username)
@@ -56,7 +52,7 @@ async def mark_loved_one_called(
         UPDATE loved_one
         SET last_called_at = NOW()
         WHERE name = $1 AND username = $2
-        RETURNING user_id, name, last_called_at, created_at
+        RETURNING username, name, last_called_at, created_at
     """
 
     row = await conn.fetchrow(query, loved_one_name, username)

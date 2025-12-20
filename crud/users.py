@@ -42,7 +42,7 @@ async def create_user(conn: asyncpg.Connection, registration: RegistrationReques
                 VALUES ($1)
                 RETURNING id, created_at
             ), password_insert AS (
-                INSERT INTO user_password (user_id, password_hash)
+                INSERT INTO user_password (username, password_hash)
                 VALUES ($1, $2)
             ), loved_one_inputs AS (
                 SELECT
@@ -79,7 +79,7 @@ async def authenticate_user(conn: asyncpg.Connection, username: str, password: s
     query = """
         SELECT u.id, u.created_at, up.password_hash
         FROM "user" u
-        JOIN user_password up ON up.user_id = u.id
+        JOIN user_password up ON up.username = u.id
         WHERE u.id = $1
     """
 

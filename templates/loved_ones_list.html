@@ -1,0 +1,26 @@
+{% for loved_one in loved_ones %}
+<div class="bg-warm-800 border border-warm-500/30 rounded-xl p-5 flex flex-col">
+    <span class="font-medium text-warm-50 text-lg mb-1">{{ loved_one.name }}</span>
+    <span class="text-warm-300 text-sm mb-4">last called: {{ loved_one.last_called | format_date }}</span>
+    <div class="flex gap-2 mt-auto justify-end">
+        <button
+            hx-post="/loved_ones/{{ loved_one.name }}/called"
+            hx-target="#loved_ones-list"
+            hx-swap="innerHTML"
+            class="bg-warm-300 text-warm-950 px-4 py-1.5 rounded-md text-sm font-medium hover:bg-warm-100 transition-colors cursor-pointer"
+        >
+            called
+        </button>
+        <button
+            hx-delete="/loved_ones/{{ loved_one.name }}"
+            hx-target="#loved_ones-list"
+            hx-swap="innerHTML"
+            class="bg-warm-800 text-warm-400 px-3 py-1.5 rounded-md text-sm font-medium border border-warm-500/50 hover:bg-matte-red hover:text-warm-50 hover:border-matte-red transition-colors cursor-pointer"
+        >
+            delete
+        </button>
+    </div>
+</div>
+{% else %}
+<p class="text-warm-400 text-center py-8 col-span-full">No loved ones added yet.</p>
+{% endfor %}

@@ -1,0 +1,76 @@
+<html>
+    <head>
+        <title>call your loved ones</title>
+        <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+        <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <style type="text/tailwindcss">
+            @theme {
+                --color-warm-950: #232220;
+                --color-warm-800: #4e4c4f;
+                --color-warm-500: #9f8d8d;
+                --color-warm-400: #c4b5a8;
+                --color-warm-300: #d9ae8e;
+                --color-warm-100: #ffddba;
+                --color-warm-50: #fff5e6;
+                --color-matte-red: #8b5a5a;
+            }
+        </style>
+    </head>
+    <body class="bg-warm-950 min-h-screen p-4 sm:p-8 lowercase">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+                <h1 class="text-2xl sm:text-3xl font-bold text-warm-100 tracking-wide">lots of people would love to hear from you</h1>
+
+                <form hx-post="/loved_ones" hx-target="#loved_ones-list" hx-swap="innerHTML" hx-on::after-request="this.reset()" class="flex gap-3 w-full sm:w-auto shrink-0">
+                    <input
+                        type="text"
+                        name="name"
+                        placeholder="name"
+                        autocomplete="off"
+                        data-1p-ignore
+                        data-lpignore="true"
+                        class="bg-warm-800 border border-warm-500 rounded-lg px-4 py-2 text-warm-100 placeholder-warm-500 focus:outline-none focus:border-warm-300 transition-colors flex-1 sm:w-48"
+                        required
+                    />
+                    <button
+                        type="submit"
+                        class="bg-warm-300 text-warm-950 px-5 py-2 rounded-lg font-medium hover:bg-warm-100 transition-colors cursor-pointer"
+                    >
+                        add
+                    </button>
+                </form>
+            </div>
+
+            <div id="loved_ones-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {% for loved_one in loved_ones %}
+                <div class="bg-warm-800 border border-warm-500/30 rounded-xl p-5 flex flex-col">
+                    <span class="font-medium text-warm-50 text-lg mb-1">{{ loved_one.name }}</span>
+                    <span class="text-warm-300 text-sm mb-4">last called: {{ loved_one.last_called | format_date }}</span>
+                    <div class="flex gap-2 mt-auto justify-end">
+                        <button
+                            hx-post="/loved_ones/{{ loved_one.name }}/called"
+                            hx-target="#loved_ones-list"
+                            hx-swap="innerHTML"
+                            class="bg-warm-300 text-warm-950 px-4 py-1.5 rounded-md text-sm font-medium hover:bg-warm-100 transition-colors cursor-pointer"
+                        >
+                            called
+                        </button>
+                        <button
+                            hx-delete="/loved_ones/{{ loved_one.name }}"
+                            hx-target="#loved_ones-list"
+                            hx-swap="innerHTML"
+                            class="bg-warm-800 text-warm-400 px-3 py-1.5 rounded-md text-sm font-medium border border-warm-500/50 hover:bg-matte-red hover:text-warm-50 hover:border-matte-red transition-colors cursor-pointer"
+                        >
+                            delete
+                        </button>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-warm-500 text-center py-8 col-span-full">Nobody is hearing from you yet. Change that :)</p>
+                {% endfor %}
+            </div>
+        </div>
+    </body>
+</html>

@@ -196,9 +196,9 @@
                 }
             }
 
-            async function login(email, password) {
+            async function login(username, password) {
                 const formData = new URLSearchParams();
-                formData.append('username', email);
+                formData.append('username', username);
                 formData.append('password', password);
 
                 const response = await fetch('/api/login', {
@@ -286,10 +286,10 @@
 
                 document.getElementById('login-form').addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    const email = e.target.elements['login-email'].value;
+                    const username = e.target.elements['login-username'].value;
                     const password = e.target.elements['login-password'].value;
                     try {
-                        await login(email, password);
+                        await login(username, password);
                     } catch (err) {
                         alert(err.message);
                     }
@@ -297,7 +297,7 @@
 
                 document.getElementById('register-form').addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    const username = e.target.elements['register-email'].value;
+                    const username = e.target.elements['register-username'].value;
                     const password = e.target.elements['register-password'].value;
                     try {
                         await register(username, password);
@@ -360,9 +360,9 @@
                 <form id="login-form" class="space-y-4">
                     <h2 class="text-2xl font-bold text-warm-100 mb-4">login</h2>
                     <input
-                        type="email"
-                        name="login-email"
-                        placeholder="email"
+                        type="text"
+                        name="login-username"
+                        placeholder="username"
                         required
                         class="w-full bg-warm-950 border border-warm-500 rounded-lg px-4 py-2 text-warm-100 placeholder-warm-500 focus:outline-none focus:border-warm-300 transition-colors"
                     />
@@ -397,9 +397,9 @@
                 <form id="register-form" class="space-y-4 hidden">
                     <h2 class="text-2xl font-bold text-warm-100 mb-4">register</h2>
                     <input
-                        type="email"
-                        name="register-email"
-                        placeholder="email"
+                        type="text"
+                        name="register-username"
+                        placeholder="username"
                         required
                         class="w-full bg-warm-950 border border-warm-500 rounded-lg px-4 py-2 text-warm-100 placeholder-warm-500 focus:outline-none focus:border-warm-300 transition-colors"
                     />

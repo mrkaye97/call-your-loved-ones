@@ -234,11 +234,11 @@
                 }
             }
 
-            async function register(firstName, email, password) {
+            async function register(email, password) {
                 const response = await fetch('/api/register', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ first_name: firstName, email, password })
+                    body: JSON.stringify({ email, password })
                 });
 
                 if (response.ok) {
@@ -312,11 +312,10 @@
                 // Handle registration
                 document.getElementById('register-form').addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    const firstName = e.target.elements['register-first-name'].value;
                     const email = e.target.elements['register-email'].value;
                     const password = e.target.elements['register-password'].value;
                     try {
-                        await register(firstName, email, password);
+                        await register(email, password);
                     } catch (err) {
                         alert(err.message);
                     }
@@ -371,10 +370,8 @@
             </div>
         </div>
 
-        <!-- Auth Modal -->
         <div id="auth-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div class="bg-warm-800 rounded-xl p-8 max-w-md w-full">
-                <!-- Login Form -->
                 <form id="login-form" class="space-y-4">
                     <h2 class="text-2xl font-bold text-warm-100 mb-4">login</h2>
                     <input
@@ -412,16 +409,8 @@
                     </p>
                 </form>
 
-                <!-- Register Form -->
                 <form id="register-form" class="space-y-4 hidden">
                     <h2 class="text-2xl font-bold text-warm-100 mb-4">register</h2>
-                    <input
-                        type="text"
-                        name="register-first-name"
-                        placeholder="first name"
-                        required
-                        class="w-full bg-warm-950 border border-warm-500 rounded-lg px-4 py-2 text-warm-100 placeholder-warm-500 focus:outline-none focus:border-warm-300 transition-colors"
-                    />
                     <input
                         type="email"
                         name="register-email"

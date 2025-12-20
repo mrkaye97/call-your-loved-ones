@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 
-from api.users import router as users_router
+from api import auth
 from common.dependencies import Connection, UserDependency
 from crud.loved_ones import create_loved_one, delete_loved_one, get_loved_ones, mark_loved_one_called
 from db.database import lifespan
@@ -28,7 +28,7 @@ async def favicon():
     return FileResponse("favicon.ico")
 
 
-app.include_router(users_router)
+app.include_router(auth.router)
 
 
 @app.get("/api/loved_ones")

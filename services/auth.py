@@ -1,5 +1,4 @@
 from datetime import UTC, datetime, timedelta
-from uuid import UUID
 
 import jwt
 from bcrypt import checkpw, gensalt, hashpw
@@ -10,7 +9,7 @@ from config import settings
 
 
 class TokenData(BaseModel):
-    user_id: UUID | None
+    username: str | None
     expires_at: datetime | None
 
 
@@ -25,10 +24,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         return False
 
 
-def create_access_token(user_id: UUID) -> str:
+def create_access_token(username: str) -> str:
     return jwt.encode(
         {
-            "sub": str(user_id),
+            "sub": username,
             "exp": datetime.now(UTC) + timedelta(minutes=settings.jwt_access_token_expire_minutes),
         },
         settings.jwt_secret_key.get_secret_value(),
@@ -45,7 +44,7 @@ def parse_token(token: str) -> TokenData:
         )
 
         return TokenData(
-            user_id=decoded.get("sub"),
+            username=decoded.get("sub"),
             expires_at=decoded.get("exp"),
         )
     except jwt.PyJWTError as exc:

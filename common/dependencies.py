@@ -5,7 +5,7 @@ import asyncpg
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
-from crud.users import UserSchema, get_user
+from crud.users import get_user
 from db.database import get_db
 from services.auth import parse_token
 
@@ -15,7 +15,7 @@ oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="api/login", auto_error=F
 Connection = Annotated[asyncpg.Connection, Depends(get_db)]
 
 
-async def authenticate(conn: Connection, token: str = Depends(oauth2_scheme)) -> UserSchema:
+async def authenticate(conn: Connection, token: str = Depends(oauth2_scheme)) -> str:
     data = parse_token(token)
 
     if not data.expires_at or data.expires_at < datetime.now(UTC):
@@ -25,14 +25,14 @@ async def authenticate(conn: Connection, token: str = Depends(oauth2_scheme)) ->
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if data.user_id is None:
+    if data.username is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = await get_user(conn, user_id=data.user_id)
+    user = await get_user(conn, username=data.username)
 
     if not user:
         raise HTTPException(
@@ -46,7 +46,7 @@ async def authenticate(conn: Connection, token: str = Depends(oauth2_scheme)) ->
 
 async def maybe_authenticate(
     conn: Connection, token: str | None = Depends(oauth2_scheme_optional)
-) -> UserSchema | None:
+) -> str | None:
     if token is None:
         return None
 
@@ -59,14 +59,14 @@ async def maybe_authenticate(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if data.user_id is None:
+    if data.username is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = await get_user(conn, user_id=data.user_id)
+    user = await get_user(conn, username=data.username)
 
     if not user:
         raise HTTPException(
@@ -78,5 +78,5 @@ async def maybe_authenticate(
     return user
 
 
-User = Annotated[UserSchema, Depends(authenticate)]
-MaybeUser = Annotated[UserSchema | None, Depends(maybe_authenticate)]
+UserDependency = Annotated[str, Depends(authenticate)]
+MaybeUserDependency = Annotated[str | None, Depends(maybe_authenticate)]

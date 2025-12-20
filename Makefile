@@ -11,7 +11,7 @@ lint:
 	poetry run ruff check .
 
 type:
-	poetry run ty check
+	poetry run mypy .
 
 check: lint type
 	@echo "All checks passed!"

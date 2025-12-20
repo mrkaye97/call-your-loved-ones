@@ -1,6 +1,3 @@
-from datetime import datetime
-from typing import Any
-
 import asyncpg
 from pydantic import BaseModel
 
@@ -12,21 +9,7 @@ class UserRegistration(BaseModel):
     password: str
 
 
-class User(BaseModel):
-    username: str
-    created_at: datetime
-    updated_at: datetime
-
-    @staticmethod
-    def from_db(row: dict[str, Any]) -> "User":
-        return User(
-            username=row["user_id"],
-            created_at=row["created_at"],
-            updated_at=row["updated_at"],
-        )
-
-
-async def get_user(conn: asyncpg.Connection, username: str) -> User | None:
+async def get_user(conn: asyncpg.Connection, username: str) -> str | None:
     query = """
         SELECT id, created_at, updated_at
         FROM "user"
@@ -38,10 +21,10 @@ async def get_user(conn: asyncpg.Connection, username: str) -> User | None:
     if not row:
         return None
 
-    return User.from_db(row)
+    return str(row["id"])
 
 
-async def create_user(conn: asyncpg.Connection, registration: UserRegistration) -> User:
+async def create_user(conn: asyncpg.Connection, registration: UserRegistration) -> str:
     async with conn.transaction():
         user_query = """
             WITH user_insert AS (
@@ -63,10 +46,10 @@ async def create_user(conn: asyncpg.Connection, registration: UserRegistration) 
             hash_password(registration.password),
         )
 
-    return User.from_db(row)
+    return str(row["id"])
 
 
-async def authenticate_user(conn: asyncpg.Connection, username: str, password: str) -> User | None:
+async def authenticate_user(conn: asyncpg.Connection, username: str, password: str) -> str | None:
     query = """
         SELECT u.id, u.created_at, u.updated_at, up.password_hash
         FROM "user" u
@@ -80,6 +63,6 @@ async def authenticate_user(conn: asyncpg.Connection, username: str, password: s
         return None
 
     if verify_password(password, row["password_hash"]):
-        return User.from_db(row)
+        return str(row["id"])
 
     return None

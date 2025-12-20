@@ -22,8 +22,8 @@ async def register(
     user_data: UserRegistration,
     conn: asyncpg.Connection = Connection,
 ) -> Token:
-    db_user = await create_user(conn, user_data)
-    access_token = create_access_token(db_user.id)
+    username = await create_user(conn, user_data)
+    access_token = create_access_token(username)
 
     return Token(access_token=access_token, token_type="bearer")
 
@@ -33,19 +33,19 @@ async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     conn: asyncpg.Connection = Connection,
 ) -> Token:
-    user = await authenticate_user(
+    username = await authenticate_user(
         conn,
         username=form_data.username,
         password=form_data.password,
     )
 
-    if not user:
+    if not username:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token = create_access_token(user.id)
+    access_token = create_access_token(username)
 
     return Token(access_token=access_token, token_type="bearer")

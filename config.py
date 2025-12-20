@@ -15,10 +15,7 @@ class Settings(BaseSettings):
         "postgresql://postgres:postgres@localhost:5432/call_your_loved_ones"
     )
 
-    model_config = SettingsConfigDict(
-        extra="ignore",
-        env_file=".env",
-    )
+    model_config = SettingsConfigDict(extra="ignore", env_file=".env")
 
 
 settings = Settings()

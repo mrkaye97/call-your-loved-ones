@@ -1,7 +1,6 @@
 from datetime import datetime
 from pathlib import Path
 
-import asyncpg
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
@@ -133,21 +132,17 @@ def delete_loved_one_legacy(request: Request, name: str) -> HTMLResponse:
 
 
 @app.get("/api/loved_ones")
-async def get_loved_ones_api(username: str = UserDependency, conn: asyncpg.Connection = Connection):
+async def get_loved_ones_api(username: UserDependency, conn: Connection):
     return await get_loved_ones(conn, username)
 
 
 @app.post("/api/loved_ones")
-async def create_loved_one_api(
-    name: str, username: str = UserDependency, conn: asyncpg.Connection = Connection
-):
+async def create_loved_one_api(name: str, username: UserDependency, conn: Connection):
     return await create_loved_one(conn, username, name)
 
 
 @app.post("/api/loved_ones/{loved_one_id}/called")
-async def mark_called_api(
-    loved_one_name: str, username: str = UserDependency, conn: asyncpg.Connection = Connection
-):
+async def mark_called_api(loved_one_name: str, username: UserDependency, conn: Connection):
     loved_one = await mark_loved_one_called(conn, username, loved_one_name)
 
     if not loved_one:
@@ -157,9 +152,7 @@ async def mark_called_api(
 
 
 @app.delete("/api/loved_ones/{loved_one_id}")
-async def delete_loved_one_api(
-    loved_one_name: str, username: str = UserDependency, conn: asyncpg.Connection = Connection
-):
+async def delete_loved_one_api(loved_one_name: str, username: UserDependency, conn: Connection):
     success = await delete_loved_one(conn, username, loved_one_name)
 
     if not success:

@@ -1,13 +1,29 @@
 from datetime import datetime
 from pathlib import Path
+from uuid import UUID
 
-from fastapi import FastAPI, Form, Request
-from fastapi.responses import HTMLResponse, FileResponse
+import asyncpg
+from fastapi import FastAPI, Form, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, field_validator, Field
+from pydantic import BaseModel, Field, field_validator
 
-app = FastAPI()
+from api.users import router as users_router
+from common.dependencies import Connection, User
+from crud.loved_ones import create_loved_one, delete_loved_one, get_loved_ones, mark_loved_one_called
+from db.database import lifespan
+
+app = FastAPI(lifespan=lifespan)
 templates = Jinja2Templates(directory="templates")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def format_date(value: datetime | None) -> str:
@@ -62,6 +78,9 @@ async def favicon():
     return FileResponse("favicon.ico")
 
 
+app.include_router(users_router)
+
+
 @app.get("/")
 def index(request: Request) -> HTMLResponse:
     index = load_index()
@@ -102,7 +121,7 @@ def mark_called(request: Request, name: str) -> HTMLResponse:
 
 
 @app.delete("/loved_ones/{name}")
-def delete_loved_one(request: Request, name: str) -> HTMLResponse:
+def delete_loved_one_legacy(request: Request, name: str) -> HTMLResponse:
     index = load_index()
     index.loved_ones = [f for f in index.loved_ones if f.name != name]
 
@@ -112,3 +131,59 @@ def delete_loved_one(request: Request, name: str) -> HTMLResponse:
         name="loved_ones_list.html",
         context={"loved_ones": index.loved_ones},
     )
+
+
+# API endpoints for authenticated users
+
+
+@app.get("/api/loved_ones")
+async def get_loved_ones_api(user: User, conn: asyncpg.Connection = Connection):
+    loved_ones = await get_loved_ones(conn, user.id)
+    return loved_ones
+
+
+@app.post("/api/loved_ones")
+async def create_loved_one_api(name: str, user: User, conn: asyncpg.Connection = Connection):
+    loved_one = await create_loved_one(conn, user.id, name)
+    return loved_one
+
+
+@app.post("/api/loved_ones/{loved_one_id}/called")
+async def mark_called_api(loved_one_id: UUID, user: User, conn: asyncpg.Connection = Connection):
+    loved_one = await mark_loved_one_called(conn, user.id, loved_one_id)
+    if not loved_one:
+        raise HTTPException(status_code=404, detail="Loved one not found")
+    return loved_one
+
+
+@app.delete("/api/loved_ones/{loved_one_id}")
+async def delete_loved_one_api(loved_one_id: UUID, user: User, conn: asyncpg.Connection = Connection):
+    success = await delete_loved_one(conn, user.id, loved_one_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Loved one not found")
+    return {"success": True}
+
+
+class MigrationRequest(BaseModel):
+    loved_ones: list[dict]
+
+
+@app.post("/api/migrate")
+async def migrate_local_storage(
+    request: MigrationRequest, user: User, conn: asyncpg.Connection = Connection
+):
+    """
+    Migrate loved ones from local storage to the server.
+    Expects a list of loved ones with name, last_called, and created_at fields.
+    """
+    for lo_data in request.loved_ones:
+        # Create the loved one in the Connection
+        loved_one = await create_loved_one(conn, user.id, lo_data["name"])
+
+        # Update last_called if it exists
+        if lo_data.get("last_called"):
+            await mark_loved_one_called(conn, user.id, loved_one.id)
+
+    # Return all loved ones for the user
+    loved_ones = await get_loved_ones(conn, user.id)
+    return loved_ones

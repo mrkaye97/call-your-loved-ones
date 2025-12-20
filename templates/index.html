@@ -17,59 +17,446 @@
                 --color-matte-red: #8b5a5a;
             }
         </style>
+        <script>
+            // Local storage and auth management
+            const STORAGE_KEY = 'loved_ones';
+            const TOKEN_KEY = 'auth_token';
+
+            function getToken() {
+                return localStorage.getItem(TOKEN_KEY);
+            }
+
+            function setToken(token) {
+                localStorage.setItem(TOKEN_KEY, token);
+            }
+
+            function clearToken() {
+                localStorage.removeItem(TOKEN_KEY);
+            }
+
+            function isLoggedIn() {
+                return !!getToken();
+            }
+
+            function formatDate(dateStr) {
+                if (!dateStr) return 'never';
+                const date = new Date(dateStr);
+                return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()}`;
+            }
+
+            // Local storage operations
+            function getLovedOnesFromStorage() {
+                const data = localStorage.getItem(STORAGE_KEY);
+                return data ? JSON.parse(data) : [];
+            }
+
+            function saveLovedOnesToStorage(lovedOnes) {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(lovedOnes));
+            }
+
+            function sortLovedOnes(lovedOnes) {
+                return lovedOnes.sort((a, b) => {
+                    const aLastCalled = a.last_called ? new Date(a.last_called).getTime() : null;
+                    const bLastCalled = b.last_called ? new Date(b.last_called).getTime() : null;
+                    const aCreated = new Date(a.created_at).getTime();
+                    const bCreated = new Date(b.created_at).getTime();
+
+                    if (aLastCalled === null && bLastCalled === null) {
+                        return bCreated - aCreated;
+                    }
+                    if (aLastCalled === null) return -1;
+                    if (bLastCalled === null) return 1;
+                    return aLastCalled - bLastCalled;
+                });
+            }
+
+            // API operations (for logged-in users)
+            async function apiRequest(url, options = {}) {
+                const token = getToken();
+                const headers = {
+                    'Content-Type': 'application/json',
+                    ...(token && { 'Authorization': `Bearer ${token}` }),
+                    ...options.headers
+                };
+
+                const response = await fetch(url, { ...options, headers });
+                if (response.status === 401) {
+                    clearToken();
+                    window.location.reload();
+                }
+                return response;
+            }
+
+            async function getLovedOnesFromAPI() {
+                const response = await apiRequest('/api/loved_ones');
+                return await response.json();
+            }
+
+            async function addLovedOneAPI(name) {
+                const response = await apiRequest('/api/loved_ones', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `name=${encodeURIComponent(name)}`
+                });
+                return await response.json();
+            }
+
+            async function markCalledAPI(lovedOneId) {
+                const response = await apiRequest(`/api/loved_ones/${lovedOneId}/called`, {
+                    method: 'POST'
+                });
+                return await response.json();
+            }
+
+            async function deleteLovedOneAPI(lovedOneId) {
+                await apiRequest(`/api/loved_ones/${lovedOneId}`, {
+                    method: 'DELETE'
+                });
+            }
+
+            // Render functions
+            function renderLovedOnes(lovedOnes) {
+                const container = document.getElementById('loved_ones-list');
+                if (!lovedOnes || lovedOnes.length === 0) {
+                    container.innerHTML = '<p class="text-warm-500 text-center py-8 col-span-full">nobody is hearing from you yet. change that :)</p>';
+                    return;
+                }
+
+                const sorted = sortLovedOnes([...lovedOnes]);
+                container.innerHTML = sorted.map(lo => `
+                    <div class="bg-warm-800 border border-warm-500/30 rounded-xl p-5 flex flex-col">
+                        <span class="font-medium text-warm-50 text-lg mb-1">${lo.name}</span>
+                        <span class="text-warm-300 text-sm mb-4">last called: ${formatDate(lo.last_called)}</span>
+                        <div class="flex gap-2 mt-auto justify-end">
+                            <button
+                                onclick="markCalled('${lo.id}')"
+                                class="bg-warm-300 text-warm-950 px-4 py-1.5 rounded-md text-sm font-medium hover:bg-warm-100 transition-colors cursor-pointer"
+                            >
+                                called
+                            </button>
+                            <button
+                                onclick="deleteLo('${lo.id}')"
+                                class="bg-warm-800 text-warm-400 px-3 py-1.5 rounded-md text-sm font-medium border border-warm-500/50 hover:bg-matte-red hover:text-warm-50 hover:border-matte-red transition-colors cursor-pointer"
+                            >
+                                delete
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            async function loadLovedOnes() {
+                if (isLoggedIn()) {
+                    const lovedOnes = await getLovedOnesFromAPI();
+                    renderLovedOnes(lovedOnes);
+                } else {
+                    const lovedOnes = getLovedOnesFromStorage();
+                    renderLovedOnes(lovedOnes);
+                }
+            }
+
+            async function addLovedOne(name) {
+                if (!name) return;
+
+                if (isLoggedIn()) {
+                    await addLovedOneAPI(name);
+                    await loadLovedOnes();
+                } else {
+                    const lovedOnes = getLovedOnesFromStorage();
+                    lovedOnes.push({
+                        id: crypto.randomUUID(),
+                        name,
+                        last_called: null,
+                        created_at: new Date().toISOString()
+                    });
+                    saveLovedOnesToStorage(lovedOnes);
+                    renderLovedOnes(lovedOnes);
+                }
+            }
+
+            async function markCalled(id) {
+                if (isLoggedIn()) {
+                    await markCalledAPI(id);
+                    await loadLovedOnes();
+                } else {
+                    const lovedOnes = getLovedOnesFromStorage();
+                    const lo = lovedOnes.find(l => l.id === id);
+                    if (lo) {
+                        lo.last_called = new Date().toISOString();
+                        saveLovedOnesToStorage(lovedOnes);
+                        renderLovedOnes(lovedOnes);
+                    }
+                }
+            }
+
+            async function deleteLo(id) {
+                if (isLoggedIn()) {
+                    await deleteLovedOneAPI(id);
+                    await loadLovedOnes();
+                } else {
+                    let lovedOnes = getLovedOnesFromStorage();
+                    lovedOnes = lovedOnes.filter(l => l.id !== id);
+                    saveLovedOnesToStorage(lovedOnes);
+                    renderLovedOnes(lovedOnes);
+                }
+            }
+
+            async function migrateData() {
+                const localData = getLovedOnesFromStorage();
+                if (localData.length === 0) return;
+
+                await apiRequest('/api/migrate', {
+                    method: 'POST',
+                    body: JSON.stringify({ loved_ones: localData })
+                });
+
+                // Clear local storage after migration
+                localStorage.removeItem(STORAGE_KEY);
+            }
+
+            async function login(email, password) {
+                const formData = new URLSearchParams();
+                formData.append('username', email);
+                formData.append('password', password);
+
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setToken(data.access_token);
+                    await migrateData();
+                    window.location.reload();
+                } else {
+                    throw new Error('Invalid credentials');
+                }
+            }
+
+            async function register(firstName, email, password) {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ first_name: firstName, email, password })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    setToken(data.access_token);
+                    await migrateData();
+                    window.location.reload();
+                } else {
+                    throw new Error('Registration failed');
+                }
+            }
+
+            function logout() {
+                clearToken();
+                window.location.reload();
+            }
+
+            function showAuthModal() {
+                document.getElementById('auth-modal').classList.remove('hidden');
+            }
+
+            function hideAuthModal() {
+                document.getElementById('auth-modal').classList.add('hidden');
+            }
+
+            function showLogin() {
+                document.getElementById('register-form').classList.add('hidden');
+                document.getElementById('login-form').classList.remove('hidden');
+            }
+
+            function showRegister() {
+                document.getElementById('login-form').classList.add('hidden');
+                document.getElementById('register-form').classList.remove('hidden');
+            }
+
+            // Initialize on page load
+            document.addEventListener('DOMContentLoaded', async () => {
+                await loadLovedOnes();
+
+                // Show/hide auth button
+                const authBtn = document.getElementById('auth-btn');
+                const userInfo = document.getElementById('user-info');
+                if (isLoggedIn()) {
+                    authBtn.classList.add('hidden');
+                    userInfo.classList.remove('hidden');
+                } else {
+                    authBtn.classList.remove('hidden');
+                    userInfo.classList.add('hidden');
+                }
+
+                // Handle form submission
+                document.getElementById('add-form').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const name = e.target.elements.name.value;
+                    await addLovedOne(name);
+                    e.target.reset();
+                });
+
+                // Handle login
+                document.getElementById('login-form').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const email = e.target.elements['login-email'].value;
+                    const password = e.target.elements['login-password'].value;
+                    try {
+                        await login(email, password);
+                    } catch (err) {
+                        alert(err.message);
+                    }
+                });
+
+                // Handle registration
+                document.getElementById('register-form').addEventListener('submit', async (e) => {
+                    e.preventDefault();
+                    const firstName = e.target.elements['register-first-name'].value;
+                    const email = e.target.elements['register-email'].value;
+                    const password = e.target.elements['register-password'].value;
+                    try {
+                        await register(firstName, email, password);
+                    } catch (err) {
+                        alert(err.message);
+                    }
+                });
+            });
+        </script>
     </head>
     <body class="bg-warm-950 min-h-screen p-4 sm:p-8 lowercase">
         <div class="max-w-6xl mx-auto">
             <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
                 <h1 class="text-2xl sm:text-3xl font-bold text-warm-100 tracking-wide">lots of people would love to hear from you</h1>
 
-                <form hx-post="/loved_ones" hx-target="#loved_ones-list" hx-swap="innerHTML" hx-on::after-request="this.reset()" class="flex gap-3 w-full sm:w-auto shrink-0">
-                    <input
-                        type="text"
-                        name="name"
-                        placeholder="name"
-                        autocomplete="off"
-                        data-1p-ignore
-                        data-lpignore="true"
-                        class="bg-warm-800 border border-warm-500 rounded-lg px-4 py-2 text-warm-100 placeholder-warm-500 focus:outline-none focus:border-warm-300 transition-colors flex-1 sm:w-48"
-                        required
-                    />
+                <div class="flex gap-3 w-full sm:w-auto shrink-0 items-center">
+                    <form id="add-form" class="flex gap-3 flex-1 sm:flex-initial">
+                        <input
+                            type="text"
+                            name="name"
+                            placeholder="name"
+                            autocomplete="off"
+                            data-1p-ignore
+                            data-lpignore="true"
+                            class="bg-warm-800 border border-warm-500 rounded-lg px-4 py-2 text-warm-100 placeholder-warm-500 focus:outline-none focus:border-warm-300 transition-colors flex-1 sm:w-48"
+                            required
+                        />
+                        <button
+                            type="submit"
+                            class="bg-warm-300 text-warm-950 px-5 py-2 rounded-lg font-medium hover:bg-warm-100 transition-colors cursor-pointer"
+                        >
+                            add
+                        </button>
+                    </form>
+
                     <button
-                        type="submit"
-                        class="bg-warm-300 text-warm-950 px-5 py-2 rounded-lg font-medium hover:bg-warm-100 transition-colors cursor-pointer"
+                        id="auth-btn"
+                        onclick="showAuthModal()"
+                        class="bg-warm-800 text-warm-100 px-4 py-2 rounded-lg font-medium border border-warm-500 hover:bg-warm-700 transition-colors cursor-pointer hidden"
                     >
-                        add
+                        login
                     </button>
-                </form>
+
+                    <button
+                        id="user-info"
+                        onclick="logout()"
+                        class="bg-warm-800 text-warm-100 px-4 py-2 rounded-lg font-medium border border-warm-500 hover:bg-warm-700 transition-colors cursor-pointer hidden"
+                    >
+                        logout
+                    </button>
+                </div>
             </div>
 
             <div id="loved_ones-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {% for loved_one in loved_ones %}
-                <div class="bg-warm-800 border border-warm-500/30 rounded-xl p-5 flex flex-col">
-                    <span class="font-medium text-warm-50 text-lg mb-1">{{ loved_one.name }}</span>
-                    <span class="text-warm-300 text-sm mb-4">last called: {{ loved_one.last_called | format_date }}</span>
-                    <div class="flex gap-2 mt-auto justify-end">
+            </div>
+        </div>
+
+        <!-- Auth Modal -->
+        <div id="auth-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div class="bg-warm-800 rounded-xl p-8 max-w-md w-full">
+                <!-- Login Form -->
+                <form id="login-form" class="space-y-4">
+                    <h2 class="text-2xl font-bold text-warm-100 mb-4">login</h2>
+                    <input
+                        type="email"
+                        name="login-email"
+                        placeholder="email"
+                        required
+                        class="w-full bg-warm-950 border border-warm-500 rounded-lg px-4 py-2 text-warm-100 placeholder-warm-500 focus:outline-none focus:border-warm-300 transition-colors"
+                    />
+                    <input
+                        type="password"
+                        name="login-password"
+                        placeholder="password"
+                        required
+                        class="w-full bg-warm-950 border border-warm-500 rounded-lg px-4 py-2 text-warm-100 placeholder-warm-500 focus:outline-none focus:border-warm-300 transition-colors"
+                    />
+                    <div class="flex gap-3">
                         <button
-                            hx-post="/loved_ones/{{ loved_one.name }}/called"
-                            hx-target="#loved_ones-list"
-                            hx-swap="innerHTML"
-                            class="bg-warm-300 text-warm-950 px-4 py-1.5 rounded-md text-sm font-medium hover:bg-warm-100 transition-colors cursor-pointer"
+                            type="submit"
+                            class="flex-1 bg-warm-300 text-warm-950 px-5 py-2 rounded-lg font-medium hover:bg-warm-100 transition-colors cursor-pointer"
                         >
-                            called
+                            login
                         </button>
                         <button
-                            hx-delete="/loved_ones/{{ loved_one.name }}"
-                            hx-target="#loved_ones-list"
-                            hx-swap="innerHTML"
-                            class="bg-warm-800 text-warm-400 px-3 py-1.5 rounded-md text-sm font-medium border border-warm-500/50 hover:bg-matte-red hover:text-warm-50 hover:border-matte-red transition-colors cursor-pointer"
+                            type="button"
+                            onclick="hideAuthModal()"
+                            class="bg-warm-700 text-warm-100 px-5 py-2 rounded-lg font-medium hover:bg-warm-600 transition-colors cursor-pointer"
                         >
-                            delete
+                            cancel
                         </button>
                     </div>
-                </div>
-                {% else %}
-                <p class="text-warm-500 text-center py-8 col-span-full">nobody is hearing from you yet. change that :)</p>
-                {% endfor %}
+                    <p class="text-warm-400 text-sm text-center">
+                        don't have an account?
+                        <button type="button" onclick="showRegister()" class="text-warm-300 hover:text-warm-100 underline">register</button>
+                    </p>
+                </form>
+
+                <!-- Register Form -->
+                <form id="register-form" class="space-y-4 hidden">
+                    <h2 class="text-2xl font-bold text-warm-100 mb-4">register</h2>
+                    <input
+                        type="text"
+                        name="register-first-name"
+                        placeholder="first name"
+                        required
+                        class="w-full bg-warm-950 border border-warm-500 rounded-lg px-4 py-2 text-warm-100 placeholder-warm-500 focus:outline-none focus:border-warm-300 transition-colors"
+                    />
+                    <input
+                        type="email"
+                        name="register-email"
+                        placeholder="email"
+                        required
+                        class="w-full bg-warm-950 border border-warm-500 rounded-lg px-4 py-2 text-warm-100 placeholder-warm-500 focus:outline-none focus:border-warm-300 transition-colors"
+                    />
+                    <input
+                        type="password"
+                        name="register-password"
+                        placeholder="password"
+                        required
+                        class="w-full bg-warm-950 border border-warm-500 rounded-lg px-4 py-2 text-warm-100 placeholder-warm-500 focus:outline-none focus:border-warm-300 transition-colors"
+                    />
+                    <div class="flex gap-3">
+                        <button
+                            type="submit"
+                            class="flex-1 bg-warm-300 text-warm-950 px-5 py-2 rounded-lg font-medium hover:bg-warm-100 transition-colors cursor-pointer"
+                        >
+                            register
+                        </button>
+                        <button
+                            type="button"
+                            onclick="hideAuthModal()"
+                            class="bg-warm-700 text-warm-100 px-5 py-2 rounded-lg font-medium hover:bg-warm-600 transition-colors cursor-pointer"
+                        >
+                            cancel
+                        </button>
+                    </div>
+                    <p class="text-warm-400 text-sm text-center">
+                        already have an account?
+                        <button type="button" onclick="showLogin()" class="text-warm-300 hover:text-warm-100 underline">login</button>
+                    </p>
+                </form>
             </div>
         </div>
     </body>

@@ -69,6 +69,4 @@ async def delete_loved_one(conn: asyncpg.Connection, username: str, loved_one_na
 
     result = await conn.execute(query, loved_one_name, username)
 
-    print(result)
-
     return bool(result == "DELETE 1")

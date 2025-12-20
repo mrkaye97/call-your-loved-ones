@@ -13,13 +13,13 @@ class TokenData(BaseModel):
     expires_at: datetime | None
 
 
-def hash_password(password: str) -> str:
-    return hashpw(password.encode(), gensalt()).decode()
+def hash_password(password: str) -> bytes:
+    return hashpw(password.encode(), gensalt())
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
+def verify_password(plain_password: str, hashed_password: bytes) -> bool:
     try:
-        return checkpw(plain_password.encode(), hashed_password.encode())
+        return checkpw(plain_password.encode(), hashed_password)
     except ValueError:
         return False
 

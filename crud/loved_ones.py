@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field
 
 
 class LovedOne(BaseModel):
-    username: str
     name: str
     last_called_at: datetime | None = None
     created_at: datetime = Field(default_factory=datetime.now)
@@ -14,7 +13,6 @@ class LovedOne(BaseModel):
     @staticmethod
     def from_db(row: dict[str, Any]) -> "LovedOne":
         return LovedOne(
-            username=row["username"],
             name=row["name"],
             last_called_at=row["last_called_at"],
             created_at=row["created_at"],
@@ -23,7 +21,7 @@ class LovedOne(BaseModel):
 
 async def get_loved_ones(conn: asyncpg.Connection, username: str) -> list[LovedOne]:
     query = """
-        SELECT username, name, last_called_at, created_at
+        SELECT name, last_called_at, created_at
         FROM loved_one
         WHERE username = $1
     """
@@ -37,7 +35,7 @@ async def create_loved_one(conn: asyncpg.Connection, username: str, name: str) -
     query = """
         INSERT INTO loved_one (username, name, last_called_at)
         VALUES ($1, $2, NULL)
-        RETURNING username, name, last_called_at, created_at
+        RETURNING name, last_called_at, created_at
     """
 
     row = await conn.fetchrow(query, username, name)
@@ -52,7 +50,7 @@ async def mark_loved_one_called(
         UPDATE loved_one
         SET last_called_at = NOW()
         WHERE name = $1 AND username = $2
-        RETURNING username, name, last_called_at, created_at
+        RETURNING name, last_called_at, created_at
     """
 
     row = await conn.fetchrow(query, loved_one_name, username)

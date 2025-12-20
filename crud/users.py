@@ -68,7 +68,7 @@ async def create_user(conn: asyncpg.Connection, registration: RegistrationReques
             loved_one_created_ats,
         )
 
-    return row["username"]
+    return str(row["username"])
 
 
 async def authenticate_user(conn: asyncpg.Connection, username: str, password: str) -> str | None:
@@ -84,7 +84,7 @@ async def authenticate_user(conn: asyncpg.Connection, username: str, password: s
     if not row:
         return None
 
-    if verify_password(password, row["password_hash"]):
+    if verify_password(password, bytes(row["password_hash"])):
         return str(row["username"])
 
     return None

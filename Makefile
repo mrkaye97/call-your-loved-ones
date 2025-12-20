@@ -20,3 +20,6 @@ fix:
 	poetry run ruff check --fix .
 	poetry run black .
 	poetry run isort .
+
+run:
+	poetry run fastapi dev

@@ -1,6 +1,5 @@
 from typing import Annotated
 
-import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
@@ -20,7 +19,7 @@ class Token(BaseModel):
 @router.post("/register", response_model=Token)
 async def register(
     user_data: UserRegistration,
-    conn: asyncpg.Connection = Connection,
+    conn: Connection,
 ) -> Token:
     username = await create_user(conn, user_data)
     access_token = create_access_token(username)
@@ -31,7 +30,7 @@ async def register(
 @router.post("/login", response_model=Token)
 async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
-    conn: asyncpg.Connection = Connection,
+    conn: Connection,
 ) -> Token:
     username = await authenticate_user(
         conn,

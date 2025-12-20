@@ -3,13 +3,12 @@ version: "3.8"
 services:
   db:
     image: postgres:17
-    container_name: call_your_loved_ones_db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: call_your_loved_ones
     ports:
-      - "5432:5432"
+      - "5456:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
@@ -18,20 +17,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
-  app:
-    build: .
-    container_name: call_your_loved_ones_app
-    ports:
-      - "8000:8000"
-    environment:
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/call_your_loved_ones
-    depends_on:
-      db:
-        condition: service_healthy
-    volumes:
-      - .:/app
-    command: fastapi dev --host 0.0.0.0 --port 8000 main.py
 
 volumes:
   postgres_data:

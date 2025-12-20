@@ -10,7 +10,6 @@ class LovedOne(BaseModel):
     name: str
     last_called: datetime | None
     created_at: datetime = Field(default_factory=datetime.now)
-    updated_at: datetime = Field(default_factory=datetime.now)
 
     @staticmethod
     def from_db(row: dict[str, Any]) -> "LovedOne":
@@ -19,13 +18,12 @@ class LovedOne(BaseModel):
             name=row["name"],
             last_called=row["last_called"],
             created_at=row["created_at"],
-            updated_at=row["updated_at"],
         )
 
 
 async def get_loved_ones(conn: asyncpg.Connection, username: str) -> list[LovedOne]:
     query = """
-        SELECT user_id, name, last_called, created_at, updated_at
+        SELECT user_id, name, last_called, created_at
         FROM loved_one
         WHERE username = $1
         ORDER BY
@@ -43,7 +41,7 @@ async def create_loved_one(conn: asyncpg.Connection, username: str, name: str) -
     query = """
         INSERT INTO loved_one (username, name, last_called)
         VALUES ($1, $2, NULL)
-        RETURNING username, name, last_called, created_at, updated_at
+        RETURNING username, name, last_called, created_at
     """
 
     row = await conn.fetchrow(query, username, name)
@@ -56,11 +54,9 @@ async def mark_loved_one_called(
 ) -> LovedOne | None:
     query = """
         UPDATE loved_one
-        SET
-            last_called = NOW(),
-            updated_at = NOW()
+        SET last_called = NOW()
         WHERE name = $1 AND username = $2
-        RETURNING user_id, name, last_called, created_at, updated_at
+        RETURNING user_id, name, last_called, created_at
     """
 
     row = await conn.fetchrow(query, loved_one_name, username)

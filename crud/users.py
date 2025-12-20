@@ -11,7 +11,7 @@ class UserRegistration(BaseModel):
 
 async def get_user(conn: asyncpg.Connection, username: str) -> str | None:
     query = """
-        SELECT id, created_at, updated_at
+        SELECT id, created_at
         FROM "user"
         WHERE id = $1
     """
@@ -30,13 +30,13 @@ async def create_user(conn: asyncpg.Connection, registration: UserRegistration) 
             WITH user_insert AS (
                 INSERT INTO "user" (id)
                 VALUES ($1)
-                RETURNING id, created_at, updated_at
+                RETURNING id, created_at
             ), password_insert AS (
                 INSERT INTO user_password (user_id, password_hash)
                 VALUES ($1, $2)
             )
 
-            SELECT id, created_at, updated_at
+            SELECT id, created_at
             FROM user_insert
         """
 
@@ -51,7 +51,7 @@ async def create_user(conn: asyncpg.Connection, registration: UserRegistration) 
 
 async def authenticate_user(conn: asyncpg.Connection, username: str, password: str) -> str | None:
     query = """
-        SELECT u.id, u.created_at, u.updated_at, up.password_hash
+        SELECT u.id, u.created_at, up.password_hash
         FROM "user" u
         JOIN user_password up ON up.user_id = u.id
         WHERE u.id = $1

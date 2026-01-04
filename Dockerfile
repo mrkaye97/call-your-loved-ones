@@ -5,6 +5,8 @@ ENV PYTHONDONTWRITEBYTECODE=1
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+
 COPY pyproject.toml poetry.lock* ./
 
 RUN pip install poetry
@@ -17,6 +19,8 @@ COPY . .
 
 RUN mkdir -p /app/db
 
+RUN chmod +x /app/start.sh
+
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/app/start.sh"]

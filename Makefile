@@ -1,7 +1,7 @@
 .PHONY: format lint type check install
 
 install:
-	poetry install --with dev --no-root
+	poetry install --extras dev --no-root
 
 format:
 	poetry run black .

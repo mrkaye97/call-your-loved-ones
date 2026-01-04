@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse
 
@@ -37,7 +37,7 @@ async def get_loved_ones_api(username: UserDependency, conn: Connection):
 
 
 @app.post("/api/loved_ones")
-async def create_loved_one_api(name: str, username: UserDependency, conn: Connection):
+async def create_loved_one_api(username: UserDependency, conn: Connection, name: str = Form(...)):
     return await create_loved_one(conn, username, name)
 
 

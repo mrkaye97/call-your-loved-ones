@@ -14,3 +14,6 @@ The app is FastAPI (but mostly just HTML) with a Postgres database (although it 
 
 1. `docker compose up -d` to start the database.
 2. `make install && make run` to run the app.
+
+There's also a pre-built Docker image on [Docker Hub](https://hub.docker.com/r/mrkaye97/call-your-loved-ones).
+
